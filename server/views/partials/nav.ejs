@@ -1,0 +1,44 @@
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-dumbbell"></i>
+                <span>FitTracker</span>
+            </div>
+            <div class="nav-menu">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/training" class="nav-link">Start Training</a>
+                <a href="/diet" class="nav-link">Diet</a>
+                <a href="/pricing" class="nav-link">Pricing</a>
+                <a href="/profile" class="nav-link">Profile</a>
+                <% if (!currentUser) { %>
+                <a href="/signin" class="nav-link login-btn">Login</a>
+                <a href="/signup" class="nav-link">Sign Up</a>
+                <% } else { %>
+                <span class="nav-link">Hi, <%= currentUser.username %></span>
+                <form action="/signout" method="post" style="display:inline" id="signoutForm">
+                    <button type="submit" class="nav-link" style="background:none;border:none;color:white;cursor:pointer">Logout</button>
+                </form>
+                <% } %>
+            </div>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+    <script>
+        (function () {
+            const signoutForm = document.getElementById('signoutForm');
+            if (!signoutForm) return;
+            signoutForm.addEventListener('submit', function () {
+                try {
+                    Object.keys(localStorage).forEach((key) => {
+                        if (key.startsWith('fitTracker_cache_')) {
+                            localStorage.removeItem(key);
+                        }
+                    });
+                } catch (_) {}
+            });
+        })();
+    </script>

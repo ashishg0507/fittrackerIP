@@ -1,0 +1,30 @@
+{
+  "name": "personaltrainer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "ejs": "^3.1.10",
+    "express": "^5.1.0",
+    "express-session": "^1.17.3",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.18.1",
+    "razorpay": "^2.9.6"
+  },
+  "devDependencies": {
+    "selfsigned": "^5.2.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
