@@ -161,9 +161,27 @@ const MONGO_URI = process.env.MONGO_URI;
 if (!MONGO_URI) {
     throw new Error('Missing required environment variable: MONGO_URI');
 }
-mongoose.connect(MONGO_URI)
+mongoose.connect(MONGO_URI, {
+    serverSelectionTimeoutMS: 10000,
+    socketTimeoutMS: 45000
+})
 	.then(() => console.log('MongoDB connected'))
 	.catch((err) => console.error('MongoDB connection error:', err));
+
+function isDatabaseConnected() {
+    return mongoose.connection.readyState === 1;
+}
+
+function isMongoConnectivityError(err) {
+    return !!(
+        err &&
+        (
+            err.name === 'MongoServerSelectionError' ||
+            err.name === 'MongooseServerSelectionError' ||
+            /server selection|topology|timed out|econnrefused|enotfound/i.test(String(err.message || ''))
+        )
+    );
+}
 
 async function ensureInternalPremiumUser() {
     try {
@@ -297,6 +315,13 @@ app.get('/diet', requireAuth, (req, res) => {
 // Auth routes
 app.post('/signup', async (req, res) => {
 	try {
+        if (!isDatabaseConnected()) {
+            return res.status(503).json({
+                ok: false,
+                message: 'Database is not connected. Please try again in a few seconds.'
+            });
+        }
+
 		const rawUsername = req.body.username;
         const rawEmail = req.body.email;
         const password = req.body.password;
@@ -316,12 +341,25 @@ app.post('/signup', async (req, res) => {
 		return res.json({ ok: true, redirect: '/signin' });
 	} catch (err) {
 		console.error('Signup error:', err);
+        if (isMongoConnectivityError(err)) {
+            return res.status(503).json({
+                ok: false,
+                message: 'Database connection issue. Verify Atlas network access and MONGO_URI.'
+            });
+        }
 		return res.status(500).json({ ok: false, message: 'Internal server error.' });
 	}
 });
 
 app.post('/signin', async (req, res) => {
 	try {
+        if (!isDatabaseConnected()) {
+            return res.status(503).json({
+                ok: false,
+                message: 'Database is not connected. Please try again in a few seconds.'
+            });
+        }
+
         const rawLogin = req.body.username;
         const password = req.body.password;
         const rememberMe = req.body.rememberMe;
@@ -352,6 +390,12 @@ app.post('/signin', async (req, res) => {
         return res.json({ ok: true, redirect: '/' });
 	} catch (err) {
 		console.error('Signin error:', err);
+        if (isMongoConnectivityError(err)) {
+            return res.status(503).json({
+                ok: false,
+                message: 'Database connection issue. Verify Atlas network access and MONGO_URI.'
+            });
+        }
 		return res.status(500).json({ ok: false, message: 'Internal server error.' });
 	}
 });
