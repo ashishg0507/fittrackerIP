@@ -4,7 +4,6 @@ const fs = require('fs');
 const https = require('https');
 const http = require('http');
 const mongoose = require('mongoose');
-const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -69,13 +68,8 @@ app.use(express.json());
 // Cookie parser (for JWT)
 app.use(cookieParser());
 
-// Sessions (kept for flash-like behaviors; auth will use JWT)
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'dev_secret_change_me',
-    resave: false,
-    saveUninitialized: false,
-    cookie: { maxAge: 1000 * 60 * 60 * 24 }
-}));
+// This app uses JWT cookies for auth. We avoid express-session in production
+// to prevent MemoryStore warnings and scaling limitations on Render.
 
 // JWT helpers
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_jwt_secret_change_me';
@@ -161,12 +155,35 @@ const MONGO_URI = process.env.MONGO_URI;
 if (!MONGO_URI) {
     throw new Error('Missing required environment variable: MONGO_URI');
 }
-mongoose.connect(MONGO_URI, {
-    serverSelectionTimeoutMS: 10000,
-    socketTimeoutMS: 45000
-})
-	.then(() => console.log('MongoDB connected'))
-	.catch((err) => console.error('MongoDB connection error:', err));
+let mongoConnectPromise = null;
+
+function connectMongo() {
+    if (mongoose.connection.readyState === 1) {
+        return Promise.resolve();
+    }
+    if (mongoConnectPromise) {
+        return mongoConnectPromise;
+    }
+
+    mongoConnectPromise = mongoose.connect(MONGO_URI, {
+        serverSelectionTimeoutMS: 15000,
+        socketTimeoutMS: 45000
+    })
+        .then(() => {
+            console.log('MongoDB connected');
+        })
+        .catch((err) => {
+            console.error('MongoDB connection error:', err);
+            throw err;
+        })
+        .finally(() => {
+            mongoConnectPromise = null;
+        });
+
+    return mongoConnectPromise;
+}
+
+connectMongo();
 
 function isDatabaseConnected() {
     return mongoose.connection.readyState === 1;
@@ -316,6 +333,9 @@ app.get('/diet', requireAuth, (req, res) => {
 app.post('/signup', async (req, res) => {
 	try {
         if (!isDatabaseConnected()) {
+            await connectMongo();
+        }
+        if (!isDatabaseConnected()) {
             return res.status(503).json({
                 ok: false,
                 message: 'Database is not connected. Please try again in a few seconds.'
@@ -353,6 +373,9 @@ app.post('/signup', async (req, res) => {
 
 app.post('/signin', async (req, res) => {
 	try {
+        if (!isDatabaseConnected()) {
+            await connectMongo();
+        }
         if (!isDatabaseConnected()) {
             return res.status(503).json({
                 ok: false,
