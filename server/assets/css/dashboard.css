@@ -220,12 +220,12 @@ body {
 }
 
 .btn-primary {
-    background-color: #ddff00;
+    background-color: #ff6b35;
     color: white;
 }
 
 .btn-primary:hover {
-    background-color: #ddff00;
+    background-color: #e55a2b;
     transform: translateY(-3px);
     box-shadow: 0 10px 20px rgba(255, 107, 53, 0.3);
 }
